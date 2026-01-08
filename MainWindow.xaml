@@ -1,0 +1,17 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WebCamRecorderFree"
+        xmlns:WPF="clr-namespace:VisioForge.Core.UI.WPF;assembly=VisioForge.Core" x:Class="WebCamRecorderFree.MainWindow"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid Loaded="Grid_Loaded">
+        <Button x:Name="btnStartRecording" Content="Start" HorizontalAlignment="Left" Margin="188,342,0,0" VerticalAlignment="Top" Height="63" Width="107" Click="btnStartRecording_Click"/>
+
+        <WPF:VideoView x:Name="WebCamStreamView" Margin="87,33,60,133"/>
+        <Button x:Name="StopRecording" Content="Stop" HorizontalAlignment="Left" Margin="492,342,0,0" VerticalAlignment="Top" Height="63" Width="116" Click="StopRecording_Click"/>
+
+    </Grid>
+</Window>
