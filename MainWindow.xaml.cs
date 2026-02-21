@@ -16,18 +16,21 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using VisioForge.Core.MediaBlocks.Sinks;
-using VisioForge.Core.Types;
-using VisioForge.Core.Types.Output;
-using VisioForge.Core.Types.VideoCapture;
-using VisioForge.Core.Types.X.AudioEncoders;
-using VisioForge.Core.Types.X.Output;
-using VisioForge.Core.Types.X.Sinks;
-using VisioForge.Core.Types.X.VideoEncoders;
+//using VisioForge.Core.MediaBlocks.Sinks;
+//using VisioForge.Core.Types;
+//using VisioForge.Core.Types.Output;
+//using VisioForge.Core.Types.VideoCapture;
+//using VisioForge.Core.Types.X.AudioEncoders;
+//using VisioForge.Core.Types.X.Output;
+//using VisioForge.Core.Types.X.Sinks;
+//using VisioForge.Core.Types.X.VideoEncoders;
 
 // Import VisioForge libraries for video capture functionality
-using VisioForge.Core.VideoCapture;
-using VisioForge.Core.VideoCaptureX;
+//using VisioForge.Core.VideoCapture;
+//using VisioForge.Core.VideoCaptureX;
+
+using Emgu.CV;
+using Emgu.CV.Structure;
 
 namespace WebCamRecorderFree
 {
@@ -37,28 +40,45 @@ namespace WebCamRecorderFree
     public partial class MainWindow : Window
     {
       // The main video capture object that controls the capture process
-      private VideoCaptureCore videoCaptureCore;
+      //private VideoCaptureCore videoCaptureCore;
 
-    private int fileIndex = 0;
-    private System.Timers.Timer splitTimer = new System.Timers.Timer();
 
-    public MainWindow()
+      // Declare variables globally or in a class scope
+      VideoCapture _capture;
+      VideoWriter _writer;
+      bool _recording = false;
+
+      private int fileIndex = 0;
+      private System.Timers.Timer splitTimer = new System.Timers.Timer();
+
+      public MainWindow()
       {
           InitializeComponent();
       }
 
-      private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
+     private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
+     {
+      ////////-------------------------------------------------------/////////
+      RecordNextPart();
+      splitTimer.Interval = TimeSpan.FromMinutes(30).TotalMilliseconds;
+
+      splitTimer.Elapsed += async (s, e) =>
       {
-        RecordNextPart();
-        splitTimer.Interval = TimeSpan.FromMinutes(30).TotalMilliseconds;
-
-        splitTimer.Elapsed += async (s, e) =>
+        //await videoCaptureCore.StopAsync();
+        if (_recording)
         {
-          await videoCaptureCore.StopAsync();
-          RecordNextPart();
-        };
+          _recording = false;
+          _capture.Stop();
+          _capture.Dispose();
+          _writer.Dispose(); // Important: release the writer to finalize the file
+        }
 
-        splitTimer.Start();
+        RecordNextPart();
+      };
+
+      splitTimer.Start();
+
+      /////////------------------------------------------------------//////////
 
       //split video by parts:
       /*var h264 = new OpenH264EncoderSettings();
@@ -86,7 +106,55 @@ namespace WebCamRecorderFree
       await videoCaptureCore.StartAsync();  */
     }
 
+    private void ProcessFrame(object sender, EventArgs e)
+    {
+      if (_capture != null && _recording)
+      {
+        Mat frame = new Mat();
+        _capture.Retrieve(frame);
+
+        if (!frame.IsEmpty)
+        {
+          // Display the frame in a PictureBox (optional, e.g., 'imageBox1')
+          // imageBox1.Image = frame.ToBitmap(); 
+
+          // Write the frame to the video file
+          _writer.Write(frame);
+        }
+      }
+    }
+
     private async void RecordNextPart()
+    {
+      // Initialize capture (0 for default camera)
+      _capture = new VideoCapture(0);
+
+      // Get the frame width and height from the capture device
+      int frameWidth = _capture.Width;
+      int frameHeight = _capture.Height;
+      int fps = (int)_capture.Get(Emgu.CV.CvEnum.CapProp.Fps);
+
+      if (fps == 0) fps = 30; // Default to 30 FPS if the property is not available
+
+      // Define the output file path and codec (e.g., "output.avi", MP4V or XVID codec)
+      string outputPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), 
+        String.Format(@$"output_{DateTime.Now.ToString("dd_MM_yyyy_HH_mm")}_{fileIndex}.mp4"));
+      //string outputPath = "webcam_output.avi"; // Ensure directory exists
+
+      // Use CvInvoke.CV_FOURCC to specify the codec
+      // 'M', 'P', '4', 'V' for .mp4, 'X', 'V', 'I', 'D' for .avi are common options
+      int fourCC = VideoWriter.Fourcc('M', 'P', '4', 'V');
+
+      // Initialize VideoWriter
+      _writer = new VideoWriter(outputPath, fourCC, fps, new System.Drawing.Size(frameWidth, frameHeight), true);
+
+      // Start capturing frames and hook up the frame processing event
+      _capture.ImageGrabbed += ProcessFrame;
+      _capture.Start();
+      _recording = true;
+    }
+
+    /*private async void RecordNextPart()
     {
       var videoCaptureCameraDevice = new VideoCaptureSource(videoCaptureCore.Video_CaptureDevices()[0].Name);
 
@@ -127,20 +195,29 @@ namespace WebCamRecorderFree
       await videoCaptureCore.StartAsync();
 
       fileIndex++;
-    }
+    } */
 
     private void Grid_Loaded(object sender, RoutedEventArgs e)
     {           
       // Initialize the VideoCaptureCore object, connecting it to the VideoView control on the form
-      videoCaptureCore = new VideoCaptureCore(WebCamStreamView as IVideoView);
+      ////videoCaptureCore = new VideoCaptureCore(WebCamStreamView as IVideoView);
       // Enable resizing and specify new dimensions
-      videoCaptureCore.Video_Resize = new VideoResizeSettings(640, 480);
+      ////videoCaptureCore.Video_Resize = new VideoResizeSettings(640, 480);
     }
 
     private async void StopRecording_Click(object sender, RoutedEventArgs e)
     {
       // Stop the capture process asynchronously and finalize the output file
-      await videoCaptureCore.StopAsync();
+      /////await videoCaptureCore.StopAsync();
+      
+      if (_recording)
+      {
+        _recording = false;
+        _capture.Stop();
+        _capture.Dispose();
+        _writer.Dispose(); // Important: release the writer to finalize the file
+      }
+
       splitTimer.Stop();
     }
   }
