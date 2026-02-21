@@ -35,6 +35,7 @@ using System.Windows.Shapes;
 
 using Emgu.CV;
 using Emgu.CV.Structure;
+using WebCamRecorderFree.Config;
 
 namespace WebCamRecorderFree
 {
@@ -55,9 +56,13 @@ namespace WebCamRecorderFree
       private int fileIndex = 0;
       private System.Timers.Timer splitTimer = new System.Timers.Timer();
 
-      public MainWindow()
+    public string videoResolution { get; private set; }
+    public string storagePath { get; private set; }
+    public bool isUserSelection { get; private set; }
+
+    public MainWindow()
       {
-        videoResolution = "640x480";
+        //videoResolution = "640x480";
       }
 
      private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
@@ -228,7 +233,7 @@ namespace WebCamRecorderFree
 
     private void btnStoragePath_Click(object sender, RoutedEventArgs e)
     {
-      var selectCCTVStorageDirectoryDialog = new FolderBrowserDialog();
+      /*var selectCCTVStorageDirectoryDialog = new System.Windows.FolderBrowserDialog();
       // Optional: Set a description at the top of the dialog
       selectCCTVStorageDirectoryDialog.Description = "Select the destination folder to save CCTV videos.";
       // Optional: Set the initial directory
@@ -249,7 +254,7 @@ namespace WebCamRecorderFree
         // Use the folder path for your application logic
 
         lblVideoStoragePath.Content = $"Video Storage Path: {storagePath}";
-      }
+      }    */
     }
 
     public void UpdateAppSettingSection(Action<SurvellianceSystemConfig> updateAction)
