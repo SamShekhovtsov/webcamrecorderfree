@@ -8,10 +8,18 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid Loaded="Grid_Loaded">
-        <Button x:Name="btnStartRecording" Content="Start" HorizontalAlignment="Left" Margin="188,342,0,0" VerticalAlignment="Top" Height="63" Width="107" Click="btnStartRecording_Click"/>
-
+        <Button x:Name="btnStartRecording" Content="Start" HorizontalAlignment="Left" Margin="87,326,0,0" VerticalAlignment="Top" Height="32" Width="72" Click="btnStartRecording_Click" Background="#FFF02B2B" Foreground="#FFFAFAFA" FontWeight="Bold"/>
         <WPF:VideoView x:Name="WebCamStreamView" Margin="87,33,60,133"/>
-        <Button x:Name="StopRecording" Content="Stop" HorizontalAlignment="Left" Margin="492,342,0,0" VerticalAlignment="Top" Height="63" Width="116" Click="StopRecording_Click"/>
-
+        <Button x:Name="StopRecording" Content="Stop" HorizontalAlignment="Left" Margin="209,326,0,0" VerticalAlignment="Top" Height="32" Width="73" Click="StopRecording_Click" Background="#FFC84CDF" Foreground="#FFEDE8E8" FontWeight="Bold"/>
+        <Label x:Name="lblVideoStoragePath" Content="Path to store videos" HorizontalAlignment="Left" Margin="123,380,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="btnStoragePath" Content="......" HorizontalAlignment="Left" Margin="87,379,0,0" VerticalAlignment="Top" Height="31" Width="31" RenderTransformOrigin="0.612,-0.131" Click="btnStoragePath_Click"/>
+        <ComboBox x:Name="cmbxTargetResolution" HorizontalAlignment="Center" Margin="0,326,0,0" VerticalAlignment="Top" Width="120" Height="32" SelectionChanged="cmbxTargetResolution_SelectionChanged">
+            <ComboBoxItem Content="640x480"/>
+            <ComboBoxItem Content="1280x720"/>
+            <ComboBoxItem Content="1920x1080"/>
+            <ComboBoxItem Content="3840x2160"/>
+            <ComboBoxItem Content="7680x4320"/>
+        </ComboBox>
+        <ComboBox x:Name="cmbxSplitIntoFiles" HorizontalAlignment="Left" Margin="498,326,0,0" VerticalAlignment="Top" Width="124" Height="32"/>
     </Grid>
 </Window>
