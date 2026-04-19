@@ -1,4 +1,20 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿//using VisioForge.Core.MediaBlocks.Sinks;
+//using VisioForge.Core.Types;
+//using VisioForge.Core.Types.Output;
+//using VisioForge.Core.Types.VideoCapture;
+//using VisioForge.Core.Types.X.AudioEncoders;
+//using VisioForge.Core.Types.X.Output;
+//using VisioForge.Core.Types.X.Sinks;
+//using VisioForge.Core.Types.X.VideoEncoders;
+
+// Import VisioForge libraries for video capture functionality
+//using VisioForge.Core.VideoCapture;
+//using VisioForge.Core.VideoCaptureX;
+
+using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.Structure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Newtonsoft.Json;
 using System;
@@ -20,26 +36,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-//using VisioForge.Core.MediaBlocks.Sinks;
-//using VisioForge.Core.Types;
-//using VisioForge.Core.Types.Output;
-//using VisioForge.Core.Types.VideoCapture;
-//using VisioForge.Core.Types.X.AudioEncoders;
-//using VisioForge.Core.Types.X.Output;
-//using VisioForge.Core.Types.X.Sinks;
-//using VisioForge.Core.Types.X.VideoEncoders;
-
-// Import VisioForge libraries for video capture functionality
-//using VisioForge.Core.VideoCapture;
-//using VisioForge.Core.VideoCaptureX;
-
-using Emgu.CV;
-using Emgu.CV.Structure;
 using WebCamRecorderFree.Config;
 
 namespace WebCamRecorderFree
 {
-    /// <summary>
+    /// <summary>+
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
@@ -47,29 +48,39 @@ namespace WebCamRecorderFree
       // The main video capture object that controls the capture process
       //private VideoCaptureCore videoCaptureCore;
 
+      private WriteableBitmap _wbmp;
 
       // Declare variables globally or in a class scope
       VideoCapture _capture;
       VideoWriter _writer;
       bool _recording = false;
 
-      private int fileIndex = 0;
-      private System.Timers.Timer splitTimer = new System.Timers.Timer();
+      private int _minutesPerPart = 120; // Duration of each video part in minutes
+
+    private int fileIndex = 0;
+    private System.Timers.Timer splitTimer = new System.Timers.Timer();
 
     public string videoResolution { get; private set; }
     public string storagePath { get; private set; }
     public bool isUserSelection { get; private set; }
 
     public MainWindow()
-      {
-        //videoResolution = "640x480";
-      }
+    {
+      //videoResolution = "640x480";
+    }
+    
+    private void InitializeBitmap(int width, int height)
+    {
+      // On initialise le bitmap sur le thread UI
+      _wbmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgr24, null);
+      WebcamPreview.Source = _wbmp;
+    }
 
-     private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
+    private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
      {
       ////////-------------------------------------------------------/////////
       RecordNextPart();
-      splitTimer.Interval = TimeSpan.FromMinutes(30).TotalMilliseconds;
+      splitTimer.Interval = TimeSpan.FromMinutes(_minutesPerPart).TotalMilliseconds;
 
       splitTimer.Elapsed += async (s, e) =>
       {
@@ -119,17 +130,55 @@ namespace WebCamRecorderFree
     {
       if (_capture != null && _recording)
       {
-        Mat frame = new Mat();
-        _capture.Retrieve(frame);
-
-        if (!frame.IsEmpty)
+        using Mat frame = new Mat();
+        if(_capture.Retrieve(frame))
         {
-          // Display the frame in a PictureBox (optional, e.g., 'imageBox1')
-          // imageBox1.Image = frame.ToBitmap(); 
+          if (!frame.IsEmpty)
+          {
+            // Display the frame in a PictureBox (optional, e.g., 'imageBox1')
+            // imageBox1.Image = frame.ToBitmap(); 
+            // show the preview in the UI
+            /*Dispatcher.Invoke(() =>
+            {
+              // Conversion directe grâce au package Emgu.CV.Wpf
+              WebcamPreview.Source = frame.ToBitmapSource();
+            });*/
 
-          // Write the frame to the video file
-          _writer.Write(frame);
-        }
+            // 2. ÉCRITURE DANS LE FICHIER (Priorité haute)
+            // On écrit dans le fichier sur le thread de capture pour éviter 
+            // tout décalage lié aux ralentissements de l'interface graphique.
+
+            // 1. Préparer le texte (Date et Heure actuelle)
+            string timestamp = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
+
+            // 2. Dessiner le texte sur le 'Mat'
+            // Paramètres : image, texte, position (x,y), police, échelle, couleur, épaisseur
+            CvInvoke.PutText(
+                frame,
+                timestamp,
+                new System.Drawing.Point(10, 30), // Position en haut à gauche
+                FontFace.HersheySimplex,
+                0.6,                             // Taille du texte
+                new MCvScalar(77, 77, 255),        // Couleur Rouge (BGR)
+                2                                // Épaisseur
+            );
+
+            // Write the frame to the video file
+            if (_writer != null && _recording)
+            {
+              // 3. AFFICHAGE (Priorité secondaire)
+              // On envoie une COPIE ou on accède aux données sur le thread UI
+              Dispatcher.Invoke(new Action(() =>
+              {
+                UpdateDisplay(frame);
+              }));
+
+              _writer.Write(frame);
+            }
+
+            //_writer.Write(frame);
+          }
+        }          
       }
     }
 
@@ -142,6 +191,8 @@ namespace WebCamRecorderFree
       int frameWidth = _capture.Width;
       int frameHeight = _capture.Height;
       int fps = (int)_capture.Get(Emgu.CV.CvEnum.CapProp.Fps);
+
+      this.InitializeBitmap(frameWidth, frameHeight);
 
       if (fps == 0) fps = 30; // Default to 30 FPS if the property is not available
 
@@ -161,6 +212,23 @@ namespace WebCamRecorderFree
       _capture.ImageGrabbed += ProcessFrame;
       _capture.Start();
       _recording = true;
+    }
+
+    private void UpdateDisplay(Mat frame)
+    {
+      if (_wbmp == null || _wbmp.PixelWidth != frame.Width)
+      {
+        _wbmp = new WriteableBitmap(frame.Width, frame.Height, 96, 96, PixelFormats.Bgr24, null);
+        WebcamPreview.Source = _wbmp;
+      }
+
+      _wbmp.Lock();
+      _wbmp.WritePixels(
+          new Int32Rect(0, 0, frame.Width, frame.Height),
+          frame.DataPointer,
+          frame.Step * frame.Height,
+          frame.Step);
+      _wbmp.Unlock();
     }
 
     /*private async void RecordNextPart()

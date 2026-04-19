@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid Loaded="Grid_Loaded">
+        <Image x:Name="WebcamPreview" Stretch="Uniform" />
         <Button x:Name="btnStartRecording" Content="Start" HorizontalAlignment="Left" Margin="87,326,0,0" VerticalAlignment="Top" Height="32" Width="72" Click="btnStartRecording_Click" Background="#FFF02B2B" Foreground="#FFFAFAFA" FontWeight="Bold"/>
         <!--<WPF:VideoView x:Name="WebCamStreamView" Margin="87,33,60,133"/>-->
         <Button x:Name="StopRecording" Content="Stop" HorizontalAlignment="Left" Margin="209,326,0,0" VerticalAlignment="Top" Height="32" Width="73" Click="StopRecording_Click" Background="#FFC84CDF" Foreground="#FFEDE8E8" FontWeight="Bold"/>
