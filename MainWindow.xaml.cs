@@ -13,7 +13,11 @@
 
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using Emgu.CV.Dnn;
 using Emgu.CV.Structure;
+using Emgu.CV.Util;
+using Amazon.Rekognition;
+using Amazon.Rekognition.Model;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Newtonsoft.Json;
@@ -57,6 +61,18 @@ namespace WebCamRecorderFree
 
       private int _minutesPerPart = 120; // Duration of each video part in minutes
 
+    private Mat _prevFrame = null;
+    //private BackgroundSubtractorMOG2 _diffDetector = new BackgroundSubtractorMOG2();
+
+    // Vérifiez bien les chemins des fichiers
+    private const string cfgPath = "yolov4-tiny.cfg";
+    private const string weightsPath = "yolov4-tiny.weights";
+
+    //Net _yoloNet = DnnInvoke.ReadNetFromDarknet(cfgPath, weightsPath);
+
+
+    private List<string> _classNames = new List<string>();
+
     private int fileIndex = 0;
     private System.Timers.Timer splitTimer = new System.Timers.Timer();
 
@@ -67,13 +83,24 @@ namespace WebCamRecorderFree
     public MainWindow()
     {
       //videoResolution = "640x480";
+      this.LoadClassNames();
     }
-    
+
+    private void LoadClassNames()
+    {
+      string namesPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "coco.names");
+      _classNames = File.ReadAllLines(namesPath).ToList();
+    }
+
     private void InitializeBitmap(int width, int height)
     {
       // On initialise le bitmap sur le thread UI
-      _wbmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgr24, null);
-      WebcamPreview.Source = _wbmp;
+      // On force l'exécution sur le thread UI
+      Application.Current.Dispatcher.Invoke(() =>
+      {
+        _wbmp = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgr24, null);
+        WebcamPreview.Source = _wbmp;
+      });
     }
 
     private async void btnStartRecording_Click(object sender, RoutedEventArgs e)
@@ -126,64 +153,11 @@ namespace WebCamRecorderFree
       await videoCaptureCore.StartAsync();  */
     }
 
-    private void ProcessFrame(object sender, EventArgs e)
-    {
-      if (_capture != null && _recording)
-      {
-        using Mat frame = new Mat();
-        if(_capture.Retrieve(frame))
-        {
-          if (!frame.IsEmpty)
-          {
-            // Display the frame in a PictureBox (optional, e.g., 'imageBox1')
-            // imageBox1.Image = frame.ToBitmap(); 
-            // show the preview in the UI
-            /*Dispatcher.Invoke(() =>
-            {
-              // Conversion directe grâce au package Emgu.CV.Wpf
-              WebcamPreview.Source = frame.ToBitmapSource();
-            });*/
-
-            // 2. ÉCRITURE DANS LE FICHIER (Priorité haute)
-            // On écrit dans le fichier sur le thread de capture pour éviter 
-            // tout décalage lié aux ralentissements de l'interface graphique.
-
-            // 1. Préparer le texte (Date et Heure actuelle)
-            string timestamp = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
-
-            // 2. Dessiner le texte sur le 'Mat'
-            // Paramètres : image, texte, position (x,y), police, échelle, couleur, épaisseur
-            CvInvoke.PutText(
-                frame,
-                timestamp,
-                new System.Drawing.Point(10, 30), // Position en haut à gauche
-                FontFace.HersheySimplex,
-                0.6,                             // Taille du texte
-                new MCvScalar(77, 77, 255),        // Couleur Rouge (BGR)
-                2                                // Épaisseur
-            );
-
-            // Write the frame to the video file
-            if (_writer != null && _recording)
-            {
-              // 3. AFFICHAGE (Priorité secondaire)
-              // On envoie une COPIE ou on accède aux données sur le thread UI
-              Dispatcher.Invoke(new Action(() =>
-              {
-                UpdateDisplay(frame);
-              }));
-
-              _writer.Write(frame);
-            }
-
-            //_writer.Write(frame);
-          }
-        }          
-      }
-    }
-
     private async void RecordNextPart()
     {
+      // experimental : on pourrait faire du motion detection pour n'enregistrer que les parties avec mouvement, mais ça risque de faire rater des événements importants (ex: un intrus qui se fige pour ne pas être détecté)
+      //_prevFrame = null; // Reset previous frame for motion detection
+
       // Initialize capture (0 for default camera)
       _capture = new VideoCapture(0);
 
@@ -214,6 +188,85 @@ namespace WebCamRecorderFree
       _recording = true;
     }
 
+    private void ProcessFrame(object sender, EventArgs e)
+    {
+      if (_capture != null && _recording)
+      {
+        using Mat frame = new Mat();
+        if (_capture.Retrieve(frame))
+        {
+          if (!frame.IsEmpty)
+          {
+            // Display the frame in a PictureBox (optional, e.g., 'imageBox1')
+            // imageBox1.Image = frame.ToBitmap(); 
+            // show the preview in the UI
+            /*Dispatcher.Invoke(() =>
+            {
+              // Conversion directe grâce au package Emgu.CV.Wpf
+              WebcamPreview.Source = frame.ToBitmapSource();
+            });*/
+
+            // 2. ÉCRITURE DANS LE FICHIER (Priorité haute)
+            // On écrit dans le fichier sur le thread de capture pour éviter 
+            // tout décalage lié aux ralentissements de l'interface graphique.
+
+            this.ApplyOverlays(frame);
+
+            // Write the frame to the video file
+            if (_writer != null && _recording)
+            {
+              // 3. AFFICHAGE (Priorité secondaire)
+              // On envoie une COPIE ou on accède aux données sur le thread UI
+              Dispatcher.Invoke(new Action(() =>
+              {
+                UpdateDisplay(frame);
+              }));
+
+              // C'est l'étape la plus légère (quelques millisecondes)
+              if (HasMotion(frame))
+              {
+                Console.WriteLine("-------Mouvement détecté !-------");
+                // 3. IA LOCALE : Est-ce une personne ?
+                // On ne lance YOLO que si quelque chose a bougé
+                if (IsPersonDetected(frame))
+                {
+                  Console.WriteLine("----------Personne détectée !------");
+                  // 4. IA CLOUD : Qui est-ce ? (Asynchrone pour ne pas bloquer)
+                  // On ne l'appelle que si YOLO confirme un humain
+                  //Task.Run(() => IdentifyPersonWithAWS(frame.Clone()));
+
+                  // 5. ENREGISTREMENT
+                  //if (_recording) _writer.Write(frame);
+                }
+              }
+
+              _writer.Write(frame);
+            }
+
+            //_writer.Write(frame);
+          }
+        }
+      }
+    }
+
+    private void ApplyOverlays(Mat frame)
+    {
+      // 1. Préparer le texte (Date et Heure actuelle)
+      string timestamp = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss");
+
+      // 2. Dessiner le texte sur le 'Mat'
+      // Paramètres : image, texte, position (x,y), police, échelle, couleur, épaisseur
+      CvInvoke.PutText(
+          frame,
+          timestamp,
+          new System.Drawing.Point(10, 30), // Position en haut à gauche
+          FontFace.HersheySimplex,
+          0.6,                             // Taille du texte
+          new MCvScalar(77, 77, 255),        // Couleur Rouge (BGR)
+          2                                // Épaisseur
+      );
+    }
+
     private void UpdateDisplay(Mat frame)
     {
       if (_wbmp == null || _wbmp.PixelWidth != frame.Width)
@@ -231,6 +284,196 @@ namespace WebCamRecorderFree
       _wbmp.Unlock();
     }
 
+    /*private bool HasMotionV2Simple(Mat frame)
+    {
+      using (Mat fgMask = new Mat())
+      {
+        _diffDetector.Apply(frame, fgMask);
+        // Compte les pixels blancs (mouvement)
+        int nonZeroPixels = CvInvoke.CountNonZero(fgMask);
+        return nonZeroPixels > 5000; // Seuil à ajuster selon la sensibilité voulue
+      }
+    } */
+
+    bool HasMotion_V3(Mat currentFrame)
+    {
+      if (_prevFrame == null)
+      {
+        _prevFrame = currentFrame.Clone();
+        return false;
+      }
+
+      using (Mat grayCurrent = new Mat())
+      using (Mat grayPrev = new Mat())
+      using (Mat diff = new Mat())
+      using (Mat thresh = new Mat())
+      {
+        CvInvoke.CvtColor(currentFrame, grayCurrent, ColorConversion.Bgr2Gray);
+        CvInvoke.CvtColor(_prevFrame, grayPrev, ColorConversion.Bgr2Gray);
+
+        CvInvoke.AbsDiff(grayCurrent, grayPrev, diff);
+        CvInvoke.Threshold(diff, thresh, 25, 255, ThresholdType.Binary);
+
+        int count = CvInvoke.CountNonZero(thresh);
+
+        _prevFrame.Dispose();
+        _prevFrame = currentFrame.Clone();
+
+        return count > 1000; // Ajustez ce seuil selon vos besoins
+      }
+    }
+
+    bool HasMotion(Mat currentFrame)
+    {
+      // 1. Si c'est la toute première image, on l'enregistre et on quitte
+      if (_prevFrame == null)
+      {
+        _prevFrame = currentFrame.Clone();
+        return false;
+      }
+
+      using (Mat diff = new Mat())
+      using (Mat grayCurrent = new Mat())
+      using (Mat grayPrev = new Mat())
+      using (Mat thresholded = new Mat())
+      {
+        // 2. Conversion en niveaux de gris (plus rapide et précis pour le mouvement)
+        CvInvoke.CvtColor(currentFrame, grayCurrent, ColorConversion.Bgr2Gray);
+        CvInvoke.CvtColor(_prevFrame, grayPrev, ColorConversion.Bgr2Gray);
+
+        // 3. Calcul de la différence absolue entre l'image actuelle et la précédente
+        CvInvoke.AbsDiff(grayCurrent, grayPrev, diff);
+
+        // 4. Seuil (Threshold) : on ne garde que les pixels ayant beaucoup changé
+        CvInvoke.Threshold(diff, thresholded, 25, 255, ThresholdType.Binary);
+
+        // 5. Compter les pixels blancs (le mouvement)
+        int movementAmount = CvInvoke.CountNonZero(thresholded);
+
+        // 6. Mise à jour de l'image précédente pour le prochain cycle
+        _prevFrame.Dispose(); // Libère l'ancienne
+        _prevFrame = currentFrame.Clone();
+
+        // 7. Seuil de détection (ex: 500 pixels ont changé)
+        return movementAmount > 500;
+      }
+    }
+
+    bool IsPersonDetected(Mat frame)
+    {
+      return false; // Placeholder, à remplacer par le vrai résultat de la détection
+      // Préparation de l'image pour l'IA
+      using (Mat blob = DnnInvoke.BlobFromImage(frame, 1 / 255.0, new System.Drawing.Size(416, 416), new MCvScalar(), true, false))
+      {
+        //_yoloNet.SetInput(blob);
+        VectorOfMat output = new VectorOfMat();
+        //_yoloNet.Forward(output, _yoloNet.UnconnectedOutLayersNames);
+
+        // Logique pour parcourir les résultats et vérifier si la classe "person" (ID 0) 
+        // a un score de confiance > 0.5
+        return false; // Placeholder, à remplacer par le vrai résultat de la détection
+        //return ProcessYoloOutput(output);
+      }
+    }
+
+    private bool ProcessYoloOutput(VectorOfMat output)
+    {
+      float confidenceThreshold = 0.5f;
+
+      for (int i = 0; i < output.Size; i++)
+      {
+        float[] data = (float[])output[i].GetData();
+        for (int j = 0; j < output[i].Rows; j++)
+        {
+          int rowOffset = j * output[i].Cols;
+          float confidence = data[rowOffset + 4];
+
+          if (confidence > confidenceThreshold)
+          {
+            // Trouver l'index de la classe avec le score le plus élevé
+            int classId = 0;
+            float maxClassScore = 0;
+            for (int k = 5; k < output[i].Cols; k++)
+            {
+              if (data[rowOffset + k] > maxClassScore)
+              {
+                maxClassScore = data[rowOffset + k];
+                classId = k - 5;
+              }
+            }
+
+            // Utilisation de coco.names pour vérifier le nom
+            if (maxClassScore > confidenceThreshold)
+            {
+              string label = _classNames[classId];
+
+              if (label == "person")
+              {
+                return true; // Humain confirmé
+              }
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    private bool ProcessYoloOutput_prev_V01(VectorOfMat output)
+    {
+      float confidenceThreshold = 0.5f; // On ignore en dessous de 50% de certitude
+
+      for (int i = 0; i < output.Size; i++)
+      {
+        Mat outItem = output[i];
+        // outItem est une matrice où chaque ligne est une détection
+        // Les colonnes : [0-3] = position/taille, [4] = confiance, [5...] = scores par classe
+        float[] data = (float[])outItem.GetData();
+
+        for (int j = 0; j < outItem.Rows; j++)
+        {
+          int rowOffset = j * outItem.Cols;
+          float confidence = data[rowOffset + 4];
+
+          if (confidence > confidenceThreshold)
+          {
+            // La classe "Person" est l'index 0 dans le fichier coco.names
+            float personScore = data[rowOffset + 5];
+            if (personScore > confidenceThreshold)
+            {
+              return true; // Une personne est détectée !
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    async Task IdentifyPerson(Mat frame)
+    {
+      var client = new AmazonRekognitionClient("VOTRE_KEY", "VOTRE_SECRET", Amazon.RegionEndpoint.EUWest1);
+
+      // Conversion Mat -> Bytes pour l'API
+      byte[] imageBytes = frame.ToImage<Bgr, byte>().ToJpegData();
+
+      var request = new SearchFacesByImageRequest
+      {
+        CollectionId = "votre_collection_famille",
+        Image = new Amazon.Rekognition.Model.Image { Bytes = new MemoryStream(imageBytes) },
+        MaxFaces = 1,
+        FaceMatchThreshold = 70F
+      };
+
+      var response = await client.SearchFacesByImageAsync(request);
+      if (response.FaceMatches.Count > 0)
+      {
+        string name = response.FaceMatches[0].Face.ExternalImageId;
+        Console.WriteLine($"Personne reconnue : {name}");
+      }
+      else
+      {
+        Console.WriteLine("ALERTE : Inconnu détecté !");
+      }
+    }
     /*private async void RecordNextPart()
     {
       var videoCaptureCameraDevice = new VideoCaptureSource(videoCaptureCore.Video_CaptureDevices()[0].Name);
