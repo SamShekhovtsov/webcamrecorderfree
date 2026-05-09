@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
 		<PublishSingleFile>false</PublishSingleFile>
 		<SelfContained>false</SelfContained>
   </PropertyGroup>
@@ -17,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Content Include="coco.names">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

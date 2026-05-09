@@ -8,6 +8,6 @@ namespace WebCamRecorderFree.Config
 {
   public class Configuration
   {
-    public SurvellianceSystemConfig SurvellianceSystemConfig { get; set; }
+    public SurvellianceSystemConfig SurvellianceSystemConfig { get; set; } = new SurvellianceSystemConfig();
   }
 }
