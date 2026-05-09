@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4 d17.14
+VisualStudioVersion = 17.14.36811.4
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebCamRecorderFree", "WebCamRecorderFree.csproj", "{70688688-0B23-4F79-B910-847BE7D40798}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebCamRecorderFree", "SurvellianceSystem\WebCamRecorderFree.csproj", "{70688688-0B23-4F79-B910-847BE7D40798}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AWSFamilyManager", "AWSFamilyManager\AWSFamilyManager.csproj", "{6FFA8535-0697-46C8-AE2F-4030E8D79BE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{70688688-0B23-4F79-B910-847BE7D40798}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70688688-0B23-4F79-B910-847BE7D40798}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70688688-0B23-4F79-B910-847BE7D40798}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FFA8535-0697-46C8-AE2F-4030E8D79BE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FFA8535-0697-46C8-AE2F-4030E8D79BE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FFA8535-0697-46C8-AE2F-4030E8D79BE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FFA8535-0697-46C8-AE2F-4030E8D79BE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

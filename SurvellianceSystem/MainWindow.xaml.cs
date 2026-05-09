@@ -237,7 +237,7 @@ namespace WebCamRecorderFree
 
               bool canRunDetection = DateTime.Now >= _nextDetectionAllowedAt;
 
-              if (true)
+              if (canRunDetection)
               {
                 // C'est l'étape la plus légère (quelques millisecondes)
                 if (HasMotion(frame))
@@ -252,15 +252,16 @@ namespace WebCamRecorderFree
                   {
                     Console.WriteLine("----------Personne détectée !------");
 
-                    //DrawPersonBoxes(frame, personBoxes);
+                    DrawPersonBoxes(frame, personBoxes);
 
-                    //SaveDetectedPersonFrame(frame);
+                    SaveDetectedPersonFrame(frame);
 
                     // Skip motion/person detection for the next 7 seconds
-                    //_nextDetectionAllowedAt = DateTime.Now.Add(_detectionCooldown);
+                    _nextDetectionAllowedAt = DateTime.Now.Add(_detectionCooldown);
 
                     // Optional AWS recognition later:
-                    // Task.Run(() => IdentifyPersonWithAWS(frame.Clone()));
+                    Mat frameCopyForAws = frame.Clone();
+                    Task.Run(() => IdentifyPersonWithAWS(frameCopyForAws));
                   }
                 }
               }
@@ -447,20 +448,20 @@ namespace WebCamRecorderFree
 
     async Task IdentifyPersonWithAWS(Mat frame)
     {
-      var client = new AmazonRekognitionClient("VOTRE_KEY", "VOTRE_SECRET", Amazon.RegionEndpoint.EUWest1);
+      AmazonRekognitionClient rekognitionClient = new AmazonRekognitionClient();
 
       // Conversion Mat -> Bytes pour l'API
       byte[] imageBytes = frame.ToImage<Bgr, byte>().ToJpegData();
 
       var request = new SearchFacesByImageRequest
       {
-        CollectionId = "votre_collection_famille",
+        CollectionId = "closest-family-collection",
         Image = new Amazon.Rekognition.Model.Image { Bytes = new MemoryStream(imageBytes) },
         MaxFaces = 1,
         FaceMatchThreshold = 70F
       };
 
-      var response = await client.SearchFacesByImageAsync(request);
+      var response = await rekognitionClient.SearchFacesByImageAsync(request);
       if (response.FaceMatches.Count > 0)
       {
         string name = response.FaceMatches[0].Face.ExternalImageId;
