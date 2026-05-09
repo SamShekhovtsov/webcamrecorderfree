@@ -11,9 +11,38 @@
         Width="1180"
         MinHeight="560"
         MinWidth="780"
-        Background="#0E1116"
+        Background="#0A0D12"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
+        <DropShadowEffect x:Key="SoftShadow"
+                          BlurRadius="22"
+                          ShadowDepth="8"
+                          Direction="270"
+                          Color="#000000"
+                          Opacity="0.32" />
+
+        <DropShadowEffect x:Key="ControlShadow"
+                          BlurRadius="10"
+                          ShadowDepth="3"
+                          Direction="270"
+                          Color="#000000"
+                          Opacity="0.24" />
+
+        <LinearGradientBrush x:Key="PanelGlassBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#B81B2430" Offset="0" />
+            <GradientStop Color="#9A111821" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="FieldGlassBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#EC222D3A" Offset="0" />
+            <GradientStop Color="#D717202B" Offset="1" />
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="PreviewGlassBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#F904070B" Offset="0" />
+            <GradientStop Color="#EC10151D" Offset="1" />
+        </LinearGradientBrush>
+
         <Style TargetType="TextBlock">
             <Setter Property="Foreground" Value="#E7ECF3" />
         </Style>
@@ -31,16 +60,195 @@
             <Setter Property="Padding" Value="16,0" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2C3747" Offset="0" />
+                        <GradientStop Color="#1A2430" Offset="1" />
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="BorderBrush" Value="#4D5D71" />
+            <Setter Property="Foreground" Value="#F7FAFC" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonChrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Effect="{StaticResource ControlShadow}">
+                            <Border x:Name="ButtonHighlight"
+                                    Background="#22FFFFFF"
+                                    CornerRadius="9"
+                                    Opacity="0">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}" />
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="BorderBrush" Value="#8EA4C2" />
+                                <Setter TargetName="ButtonHighlight" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonChrome" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonChrome" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="ComboBox">
             <Setter Property="Height" Value="36" />
             <Setter Property="MinWidth" Value="160" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="#EEF4FA" />
+            <Setter Property="Background" Value="{StaticResource FieldGlassBrush}" />
+            <Setter Property="BorderBrush" Value="#415168" />
+            <Setter Property="Padding" Value="12,0,34,0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="DropDownToggle"
+                                          Background="{TemplateBinding Background}"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ComboChrome"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                BorderThickness="1"
+                                                CornerRadius="10"
+                                                TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                Effect="{StaticResource ControlShadow}">
+                                            <Grid>
+                                                <ContentPresenter Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  Margin="12,0,38,0"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Center"
+                                                                  RecognizesAccessKey="True" />
+                                                <Path Data="M 0 0 L 5 5 L 10 0 Z"
+                                                      Fill="#BFD0E1"
+                                                      HorizontalAlignment="Right"
+                                                      Margin="0,0,14,0"
+                                                      VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ComboChrome" Property="BorderBrush" Value="#7E95B3" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="ComboChrome" Property="BorderBrush" Value="#8FB7FF" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Border Background="#F0121720"
+                                        BorderBrush="#4B5B70"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        Margin="0,6,0,0"
+                                        MaxHeight="280"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        Effect="{StaticResource SoftShadow}">
+                                    <ScrollViewer Margin="4"
+                                                  SnapsToDevicePixels="True">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#EDF3F8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemChrome"
+                                Background="Transparent"
+                                CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemChrome" Property="Background" Value="#2F5F85C7" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemChrome" Property="Background" Value="#3D73A9FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinWidth" Value="160" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Foreground" Value="#EEF4FA" />
+            <Setter Property="Background" Value="{StaticResource FieldGlassBrush}" />
+            <Setter Property="BorderBrush" Value="#415168" />
+            <Setter Property="CaretBrush" Value="#8FB7FF" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="TextBoxChrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Effect="{StaticResource ControlShadow}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="TextBoxChrome" Property="BorderBrush" Value="#8FB7FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#AEB7C4" />
+            <Setter Property="Foreground" Value="#BCC8D7" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
@@ -49,9 +257,25 @@
             <Setter Property="Margin" Value="0,0,16,12" />
             <Setter Property="MinWidth" Value="176" />
         </Style>
+
+        <Style x:Key="GlassPanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelGlassBrush}" />
+            <Setter Property="BorderBrush" Value="#3A4658" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Effect" Value="{StaticResource SoftShadow}" />
+        </Style>
     </Window.Resources>
 
     <Grid Loaded="Grid_Loaded" Margin="24">
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0A0D12" Offset="0" />
+                <GradientStop Color="#101824" Offset="0.56" />
+                <GradientStop Color="#071018" Offset="1" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" MinHeight="260" />
@@ -73,24 +297,32 @@
             </StackPanel>
 
             <Border Grid.Column="1"
-                    Background="#17202B"
-                    BorderBrush="#263241"
+                    Background="#8F17202B"
+                    BorderBrush="#3F5367"
                     BorderThickness="1"
-                    CornerRadius="6"
+                    CornerRadius="10"
                     Padding="14,8"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center"
+                    Effect="{StaticResource ControlShadow}">
                 <TextBlock Text="Ready" Foreground="#88D498" FontWeight="SemiBold" />
             </Border>
         </Grid>
 
         <Border Grid.Row="1"
-                Background="#05070A"
-                BorderBrush="#263241"
+                Background="{StaticResource PreviewGlassBrush}"
+                BorderBrush="#334154"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="16"
                 Padding="12"
-                ClipToBounds="True">
+                ClipToBounds="True"
+                Effect="{StaticResource SoftShadow}">
             <Grid>
+                <Grid.Background>
+                    <RadialGradientBrush Center="0.5,0.2" RadiusX="0.9" RadiusY="0.7">
+                        <GradientStop Color="#18202D" Offset="0" />
+                        <GradientStop Color="#05070A" Offset="1" />
+                    </RadialGradientBrush>
+                </Grid.Background>
                 <TextBlock Text="Camera preview"
                            Foreground="#596577"
                            FontSize="18"
@@ -105,10 +337,7 @@
         </Border>
 
         <Border Grid.Row="2"
-                Background="#151A22"
-                BorderBrush="#263241"
-                BorderThickness="1"
-                CornerRadius="8"
+                Style="{StaticResource GlassPanelStyle}"
                 Padding="18,16"
                 Margin="0,18,0,12">
             <DockPanel LastChildFill="True">
@@ -119,16 +348,28 @@
                     <Button x:Name="btnStartRecording"
                             Content="Start"
                             Click="btnStartRecording_Click"
-                            Background="#D73F3F"
-                            BorderBrush="#EF6B6B"
-                            Foreground="#FFFFFF" />
+                            BorderBrush="#F47C7B"
+                            Foreground="#FFFFFF">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#F05D55" Offset="0" />
+                                <GradientStop Color="#B72A38" Offset="1" />
+                            </LinearGradientBrush>
+                        </Button.Background>
+                    </Button>
                     <Button x:Name="StopRecording"
                             Content="Stop"
                             Click="StopRecording_Click"
-                            Background="#6C3ED8"
-                            BorderBrush="#8B68EE"
+                            BorderBrush="#9E90F0"
                             Foreground="#FFFFFF"
-                            Margin="10,0,0,0" />
+                            Margin="10,0,0,0">
+                        <Button.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#866CF0" Offset="0" />
+                                <GradientStop Color="#4F36B8" Offset="1" />
+                            </LinearGradientBrush>
+                        </Button.Background>
+                    </Button>
                 </StackPanel>
 
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
@@ -219,10 +460,7 @@
         </Border>
 
         <Border Grid.Row="3"
-                Background="#111820"
-                BorderBrush="#263241"
-                BorderThickness="1"
-                CornerRadius="8"
+                Style="{StaticResource GlassPanelStyle}"
                 Padding="14">
             <Grid>
                 <Grid.ColumnDefinitions>
