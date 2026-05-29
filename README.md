@@ -18,8 +18,8 @@ This software was born from a real-life experience. While travelling through Asi
 ---
 
 ## Look and feel of the free webcam recorder
-![home screen](/public/webcam_recorder_screen.jpg)
-![recording...](/public/webcam_recorder_inaction.jpg)
+![home screen](/SurvellianceSystem/public/webcam_recorder_screen.jpg)
+![recording...](/SurvellianceSystem/public/webcam_recorder_inaction.jpg)
 
 ---
 
