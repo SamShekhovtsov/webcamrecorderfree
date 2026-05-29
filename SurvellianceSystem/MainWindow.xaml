@@ -79,14 +79,15 @@
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Effect="{StaticResource ControlShadow}">
-                            <Border x:Name="ButtonHighlight"
-                                    Background="#22FFFFFF"
-                                    CornerRadius="9"
-                                    Opacity="0">
+                            <Grid>
+                                <Border x:Name="ButtonHighlight"
+                                        Background="#22FFFFFF"
+                                        CornerRadius="9"
+                                        Opacity="0" />
                                 <ContentPresenter HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
                                                   Margin="{TemplateBinding Padding}" />
-                            </Border>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -348,25 +349,25 @@
                     <Button x:Name="btnStartRecording"
                             Content="Start"
                             Click="btnStartRecording_Click"
-                            BorderBrush="#F47C7B"
+                            BorderBrush="#5F6B78"
                             Foreground="#FFFFFF">
                         <Button.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#F05D55" Offset="0" />
-                                <GradientStop Color="#B72A38" Offset="1" />
+                                <GradientStop Color="#3F4854" Offset="0" />
+                                <GradientStop Color="#252D37" Offset="1" />
                             </LinearGradientBrush>
                         </Button.Background>
                     </Button>
                     <Button x:Name="StopRecording"
                             Content="Stop"
                             Click="StopRecording_Click"
-                            BorderBrush="#9E90F0"
+                            BorderBrush="#5F6B78"
                             Foreground="#FFFFFF"
                             Margin="10,0,0,0">
                         <Button.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#866CF0" Offset="0" />
-                                <GradientStop Color="#4F36B8" Offset="1" />
+                                <GradientStop Color="#3F4854" Offset="0" />
+                                <GradientStop Color="#252D37" Offset="1" />
                             </LinearGradientBrush>
                         </Button.Background>
                     </Button>

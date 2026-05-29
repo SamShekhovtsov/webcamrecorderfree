@@ -601,7 +601,9 @@ namespace WebCamRecorderFree
                 UpdateDisplay(outputFrame);
               }));
 
-              _writer.Write(outputFrame);
+              if(_writer != null) {
+                _writer.Write(outputFrame);
+              }
             }
           }
         }
